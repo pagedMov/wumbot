@@ -20,6 +20,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
+sessions = []
 
 
 async def session_factory(sessionname, showkey, episode):
@@ -64,6 +65,7 @@ async def session_factory(sessionname, showkey, episode):
             with open(f'sessions/{self.sessionname}.txt', 'w') as file:
                 json.dump({'sessionname': self.sessionname, 'showkey': self.showkey, 'episode': next}, file)
                 await ctx.send("Session data saved.")
+            sessions.remove(self)
     return Session(sessionname, showkey, episode)
 
         
@@ -77,27 +79,20 @@ async def on_ready():
 async def on_guild_join(guild):
     print(f'Joined {guild.name}')
 
-@bot.command()
-async def help(ctx):
-    await ctx.send('Commands:\n!ping - pong\n!password <password> - authenticate server\n!authservers - list authenticated servers\n!startstream - start a stream')
 
-@bot.command()
-async def createsession(ctx,session=None):
-    if str(ctx.guild.id) not in open('authservers.txt').read():
-        await ctx.send('Server not authenticated.')
-        return
-    
-    if not os.path.exists('sessions'):
-        os.makedirs('sessions')
-
-    if not session:
+@bot.command(help="Start a new session. Provide a session name under 20 characters. Sessions are deleted when all episodes have been watched. Sessions start at episode 1, but you can override this by typing a number after the session name.")
+async def createnewsession(ctx,sessionname=None,episodeoverride=None):
+    if not sessionname:
         await ctx.send('Please enter a session name.')
-        return
-    if len(session > 20):
+    if len(sessionname) > 20:
         await ctx.send('Session name too long.')
         return
-    sessiondata = {}
-    sessiondata['sessionname'] = session
+    if not os.path.exists('sessions'):
+        os.makedirs('sessions')
+    if os.path.exists(f'sessions/{sessionname}.txt'):
+        await ctx.send('Session name already exists.')
+        return
+    
     shows = plex.library.section('Video').all()
     showstring = 'Pick a show (type the number):\n```'
     counter = 1
@@ -115,25 +110,60 @@ async def createsession(ctx,session=None):
         if showchoice.content.isdigit() and int(showchoice.content) <= len(shows):
             showchoice = shows[int(showchoice.content) - 1]
             undecided = False
-        elif showchoice.content == 'exit': 
+        elif showchoice.content == 'exit':
             return
         else:
             await ctx.send('Invalid choice.')
-    sessiondata['showkey'] = showchoice.key
-    sessiondata['episode'] = 0
-    with open(f'sessions/{session}.txt', 'w') as file:
-        json.dump(sessiondata, file)
-    firstepisode = showchoice.episodes()[0]
-    await ctx.send(f'Session created. Starting with Episode 1: {firstepisode.title}')
-    startstream(ctx, firstepisode)
     
-@bot.command()
+    sessions.append(await session_factory(sessionname, showchoice.key, 0) if not episodeoverride else await session_factory(sessionname, showchoice.key, int(episodeoverride)))
+    await ctx.send(f'Starting new session {sessionname} at episode {newsession.episode + 1}')
+
+@bot.command(help="Resume a session. You will be prompted to pick a session from the list of existing sessions.")
+async def resumesession(ctx):
+    if ctx.guild.id not in open('authservers.txt').read():
+        await ctx.send('Server not authenticated.')
+        return
+    sessions = os.listdir('sessions')
+    sessionstring = 'Pick a session (type the number):\n```'
+    counter = 1
+    for session in sessions:
+        sessionstring += f'{counter} - {session}\n'
+        counter += 1
+    sessionstring += '```'
+    await ctx.send(sessionstring)
+    await ctx.send('type exit to cancel')
+
+    undecided = True
+
+    while undecided:
+        sessionchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
+        if sessionchoice.content.isdigit() and int(sessionchoice.content) <= len(sessions):
+            sessionchoice = sessions[int(sessionchoice.content) - 1]
+            undecided = False
+        elif sessionchoice.content == 'exit':
+            return
+        else:
+            await ctx.send('Invalid choice.')
+
+    with open(f'sessions/{sessionchoice}', 'r') as file:
+        sessiondata = json.load(file)
+        session = await session_factory(sessiondata['sessionname'], sessiondata['showkey'], sessiondata['episode'])
+        await session.resume(ctx, sessiondata['episode'])
+    
+    
+    
+@bot.command(help="Receive generic response from the bot to make sure it's listening to commands")
 async def ping(ctx):
     await ctx.send('pong')
 
-@bot.command()
+@bot.command(help="Authenticate the server to make use of bot commands. Ask pagedMov for the password.")
 async def password(ctx, userpass):
-    password = 'wumboner'
+
+    if os.path.exists('password.txt'):
+        password = open('password.txt').read()
+    else:
+        await ctx.send('Password not set.')
+        return
 
     if not os.path.exists('authservers.txt'):
         with open('authservers.txt', 'w') as file:
@@ -151,14 +181,14 @@ async def password(ctx, userpass):
     else:
         await ctx.send('Incorrect password.')
 
-@bot.command()
+@bot.command(help="List all authenticated servers.")
 async def authservers(ctx):
     await ctx.send(f'current channel id: {ctx.guild.id}')
     await ctx.send(open('authservers.txt').read())
     if str(ctx.guild.id) in open('authservers.txt').read():
         await ctx.send('Server is authenticated.')
 
-@bot.command()
+@bot.command(help="Manually start a stream without using the session system. Useful for testing, or if the session system breaks.")
 async def startstream(ctx,episode=None):
     global httpd
     if str(ctx.guild.id) not in open('authservers.txt').read():
@@ -306,10 +336,12 @@ async def startstream(ctx,episode=None):
     #     httpd_thread = threading.Thread(target=start_httpd, args=(httpd,))
     #     httpd_thread.start()
     # url = f'http://localhost:{PORT}/video_player.html?X-Plex-Token={urlcode}'
-
     
     await ctx.send(f'Stream started at:')
     await ctx.send(url)
 
 
-bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+if os.getenv('DISCORD_BOT_TOKEN'):
+    bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+else:
+    bot.run(open('token.txt').read())
