@@ -23,9 +23,10 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 sessions = []
 
 
-async def session_factory(sessionname, showkey, episode):
+async def session_factory(owner, sessionname, showkey, episode):
     class Session:
-        def __init__(self, sessionname, showkey, episode):
+        def __init__(self, owner, sessionname, showkey, episode):
+            self.owner = owner
             self.sessionname = sessionname
             self.showkey = showkey
             self.episode = episode
@@ -114,9 +115,11 @@ async def createnewsession(ctx,sessionname=None,episodeoverride=None):
             return
         else:
             await ctx.send('Invalid choice.')
-    
-    sessions.append(await session_factory(sessionname, showchoice.key, 0) if not episodeoverride else await session_factory(sessionname, showchoice.key, int(episodeoverride)))
+    newsession = await session_factory(ctx.author,sessionname, showchoice.key, 0) if not episodeoverride else await session_factory(sessionname, showchoice.key, int(episodeoverride))
+    sessions.append(newsession)
     await ctx.send(f'Starting new session {sessionname} at episode {newsession.episode + 1}')
+    newsession.resume(ctx, showchoice.episodes()[newsession.episode])
+    newsession = None
 
 @bot.command(help="Resume a session. You will be prompted to pick a session from the list of existing sessions.")
 async def resumesession(ctx):
