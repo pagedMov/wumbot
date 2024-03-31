@@ -22,11 +22,52 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
-def start_httpd(httpd):
-    httpd.serve_forever()
+async def session_factory(sessionname, showkey, episode):
+    class Session:
+        def __init__(self, sessionname, showkey, episode):
+            self.sessionname = sessionname
+            self.showkey = showkey
+            self.episode = episode
 
-def generateurlcode():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+        async def resume(self, ctx, episode):
+            await ctx.send(f'Resuming {episode.title}')
+            startstream(ctx, episode)
+        
+        async def next(self, ctx):
+            self.episode += 1
+            episodes = plex.library.section('Video').get(self.showkey).episodes()
+            if self.episode >= len(episodes):
+                await ctx.send('No more episodes.')
+                return
+            episode = episodes[self.episode]
+            await ctx.send(f'Starting next episode {episode.title}')
+            startstream(ctx, episode)
+
+        async def previous(self, ctx):
+            self.episode -= 1
+            episodes = plex.library.section('Video').get(self.showkey).episodes()
+            if self.episode < 0:
+                await ctx.send('No previous episodes.')
+                return
+            episode = episodes[self.episode]
+            await ctx.send(f'Starting previous episode {episode.title}')
+            startstream(ctx, episode)
+        
+        async def end(self, ctx):
+            await ctx.send('Session ended.')
+            next = self.episode + 1
+            if next >= len(plex.library.section('Video').get(self.showkey).episodes()):
+                # Delete session file
+                os.remove(f'sessions/{self.sessionname}.txt')
+                await ctx.send('No more episodes left, session deleted.')
+                return
+            with open(f'sessions/{self.sessionname}.txt', 'w') as file:
+                json.dump({'sessionname': self.sessionname, 'showkey': self.showkey, 'episode': next}, file)
+                await ctx.send("Session data saved.")
+    return Session(sessionname, showkey, episode)
+
+        
+    
 
 @bot.event
 async def on_ready():
@@ -42,6 +83,13 @@ async def help(ctx):
 
 @bot.command()
 async def createsession(ctx,session=None):
+    if str(ctx.guild.id) not in open('authservers.txt').read():
+        await ctx.send('Server not authenticated.')
+        return
+    
+    if not os.path.exists('sessions'):
+        os.makedirs('sessions')
+
     if not session:
         await ctx.send('Please enter a session name.')
         return
@@ -79,37 +127,6 @@ async def createsession(ctx,session=None):
     await ctx.send(f'Session created. Starting with Episode 1: {firstepisode.title}')
     startstream(ctx, firstepisode)
     
-@bot.command()
-async def resumesession(ctx):
-    sessions = os.listdir('sessions')
-    sessionstring = 'Pick a session (type the number):\n```'
-    counter = 1
-    for session in sessions:
-        sessionstring += f'{counter} - {session}\n'
-        counter += 1
-    sessionstring += '```'
-    await ctx.send(sessionstring)
-    await ctx.send('type exit to cancel')
-
-    undecided = True
-
-    while undecided:
-        sessionchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-        if sessionchoice.content.isdigit() and int(sessionchoice.content) <= len(sessions):
-            sessionchoice = sessions[int(sessionchoice.content) - 1]
-            undecided = False
-        elif sessionchoice.content == 'exit':
-            return
-        else:
-            await ctx.send('Invalid choice.')
-    with open(f'sessions/{sessionchoice}', 'r') as file:
-        sessiondata = json.load(file)
-    show = plex.library.section('Video').get(sessiondata['showkey'])
-    episodes = show.episodes()
-    episode = episodes[sessiondata['episode']]
-    await ctx.send(f'Resuming session {sessionchoice}. Starting stream with Episode {sessiondata["episode"] + 1}: {episode.title}')
-    startstream(ctx, episode)
-
 @bot.command()
 async def ping(ctx):
     await ctx.send('pong')
