@@ -25,6 +25,10 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 sessions = {}
 
+async def startstream(ctx, episode):
+    cog = bot.get_cog('Session Commands')
+    await cog.startstream(ctx, episode)
+
 
 async def session_factory(owner, sessionname, showkey, episode):
     class Session:
@@ -79,12 +83,24 @@ async def session_factory(owner, sessionname, showkey, episode):
                 os.remove(f'sessions/{self.sessionname}.txt')
                 await ctx.send('No more episodes left, session deleted.')
                 return
-            with open(f'sessions/{self.sessionname}.txt', 'w') as file:
+            filename = self.sessionname.replace(' ', '-')
+            with open(f'sessions/{filename}.txt', 'w') as file:
                 json.dump({'sessionname': self.sessionname, 'showkey': self.showkey.title, 'episode': next}, file)
                 await ctx.send("Session data saved.")
             sessions[str(self.owner.id)] = None
             await ctx.send('Session ended.')
+
+        async def list(self,ctx):
+            episodes = self.showkey.episodes()
+            episodestring = '```'
+            for episode in episodes:
+                episodestring += f'{episode.index} - {episode.title}\n'
+            episodestring += '```'
+            await ctx.send(episodestring)
+
     return Session(owner, sessionname, showkey, episode)
+
+        
 
 class SessionCommands(commands.Cog, name="Session Commands"):
     def __init__(self, bot):
@@ -111,6 +127,9 @@ class SessionCommands(commands.Cog, name="Session Commands"):
             return
         if str(ctx.author.id) in sessions and sessions[str(ctx.author.id)] is not None:
             await ctx.send('User already running existing session. Close it with !endsession first.')
+            return
+        if episodeoverride and not episodeoverride.isdigit():
+            await ctx.send('The session name has to be all one word.')
             return
         
         shows = plex.library.section('Video').all()
@@ -180,7 +199,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
             else:
                 await ctx.send('Invalid choice.')
 
-        with open(f'sessions/{sessionchoice}', 'r') as file:
+        filename = sessionchoice.replace(' ', '-')
+        with open(f'sessions/{filename}', 'r') as file:
             sessiondata = json.load(file)
             showkey = None
             for item in plex.library.section('Video').all():
@@ -196,18 +216,23 @@ class SessionCommands(commands.Cog, name="Session Commands"):
             await ctx.send('Server not authenticated.')
             return
         sessions = os.listdir('sessions')
+        counter = 0
         sessionstring = '```'
         for session in sessions:
-            sessionstring += f'{session}\n'
+            counter += 1
+            sessionstring += f"{counter} - {session}\n"
         sessionstring += '```'
         await ctx.send(sessionstring)
     
-    @commands.command(help="Delete a session. Provide the session name.")
+    @commands.command(help="Delete a session from the list of sessions.")
     async def deletesession(self, ctx):
         if str(ctx.guild.id) not in open('authservers.txt').read():
             await ctx.send('Server not authenticated.')
             return
         sessions = os.listdir('sessions')
+        if not sessions:
+            await ctx.send('No sessions found.')
+            return
         sessionstring = 'Pick a session to delete (type the number):\n```'
         counter = 1
         for session in sessions:
@@ -259,6 +284,14 @@ class SessionCommands(commands.Cog, name="Session Commands"):
             return
         else:
             await ctx.send(f"No session found for user {ctx.author.name}.")
+    @commands.command(help="List all episodes in the show of the current session.")
+    async def listepisodes(self,ctx):
+        if str(ctx.author.id) in sessions.keys() and sessions[str(ctx.author.id)] is not None:
+            await sessions[str(ctx.author.id)].list(ctx)
+            return
+        else:
+            await ctx.send(f"No session found for user {ctx.author.name}.")
+
     
     @commands.command(help="Manually start a stream without using the session system.\n Useful for testing, or if the session system breaks.")
     async def startstream(self, ctx,episode=None):
