@@ -20,3 +20,5 @@ Dependencies:
 plexapi
 
 discord.py
+
+I'm currently only allowing me and my friends to use this, and I don't really plan on changing that. Each server the bot joins must be authenticated via the !password command so it's only usable if you get the password from me.
