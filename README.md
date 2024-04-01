@@ -1,13 +1,14 @@
 # wumbot
 This is a discord bot I set up that will allow my friends some level of control over my personal server through discord
 
-Currently it only generates links to stream shows that I have downloaded, but planned functionality includes:
+Current functionality:
+-generates stream urls via interaction between the discord.py api and plexapi
+-keeps track of user sessions to easily resume where the user left off
+-basic controls for choosing episodes
 
--starting and stopping game servers
-
--keeping track of show sessions and remembering what episodes each session left off on
-
--other stuff later probably
+planned features:
+-starting and stopping video game servers
+-some other stuff probably
 
 Dependencies:
 
