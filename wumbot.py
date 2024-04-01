@@ -23,6 +23,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
+global sessions
 sessions = {}
 
 async def startstream(ctx, episode):
@@ -177,10 +178,10 @@ class SessionCommands(commands.Cog, name="Session Commands"):
         if str(ctx.author.id) in sessions and sessions[str(ctx.author.id)] is not None:
                 await ctx.send('User already running existing session. Close it with !endsession first.')
                 return
-        sessions = os.listdir('sessions')
+        sessionslist = os.listdir('sessions')
         sessionstring = 'Pick a session (type the number):\n```'
         counter = 1
-        for session in sessions:
+        for session in sessionslist:
             sessionstring += f'{counter} - {session}\n'
             counter += 1
         sessionstring += '```'
@@ -191,8 +192,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
 
         while undecided:
             sessionchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-            if sessionchoice.content.isdigit() and int(sessionchoice.content) <= len(sessions):
-                sessionchoice = sessions[int(sessionchoice.content) - 1]
+            if sessionchoice.content.isdigit() and int(sessionchoice.content) <= len(sessionslist):
+                sessionchoice = sessionslist[int(sessionchoice.content) - 1]
                 undecided = False
             elif sessionchoice.content == 'exit':
                 return
