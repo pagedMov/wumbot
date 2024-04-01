@@ -9,11 +9,15 @@ import json
 import re
 import asyncio
 
+print("Starting bot...")
+
 httpd = None
 plexpass = 'Wumboners!999'
 plexserver = 'movserver'
 plexuser = 'page710'
 publicip = requests.get('https://api.ipify.org').text
+
+print("Connected to plex server.")
 
 global plex
 account = MyPlexAccount(plexuser, plexpass)
