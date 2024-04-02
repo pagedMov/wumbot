@@ -35,6 +35,28 @@ async def startstream(ctx, episode):
     cog = bot.get_cog('Session Commands')
     await cog.startstream(ctx, episode)
 
+async def decide(ctx, choices):
+    list = choices
+    liststring = 'Pick an option (type the number):\n```'
+    counter = 1
+    for item in list:
+        liststring += f'{counter} - {item}\n'
+        counter += 1
+    liststring += '```'
+    await ctx.send(liststring)
+    await ctx.send('type exit to cancel')
+
+    undecided = True
+
+    while undecided:
+        choice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
+        if choice.content.isdigit() and int(choice.content) <= len(list):
+            choice = list[int(choice.content) - 1]
+            undecided = False
+        elif choice.content == 'exit':
+            return choice
+        else:
+            await ctx.send('Invalid choice.')
 
 async def session_factory(owner, sessionname, showkey, episode):
     class Session:
@@ -189,26 +211,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
             return
         
         shows = plex.library.section('Video').all()
-        showstring = 'Pick a show (type the number):\n```'
-        counter = 1
-        for show in shows:
-            showstring += f'{counter} - {show.title}\n'
-            counter += 1
-        showstring += '```'
-        await ctx.send(showstring)
-        await ctx.send('type exit to cancel')
+        showchoice = await decide(ctx, shows)
 
-        undecided = True
-
-        while undecided:
-            showchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-            if showchoice.content.isdigit() and int(showchoice.content) <= len(shows):
-                showchoice = shows[int(showchoice.content) - 1]
-                undecided = False
-            elif showchoice.content == 'exit':
-                return
-            else:
-                await ctx.send('Invalid choice.')
         newsession = await session_factory(ctx.author,sessionname, showchoice, 0) if not episodeoverride else await session_factory(sessionname, showchoice.key, int(episodeoverride))
         sessions[str(ctx.author.id)] = newsession
         await ctx.send(f'Starting new session {sessionname} at episode {newsession.episode + 1}')
@@ -234,26 +238,7 @@ class SessionCommands(commands.Cog, name="Session Commands"):
                 await ctx.send('User already running existing session. Close it with !endsession first.')
                 return
         sessionslist = os.listdir('sessions')
-        sessionstring = 'Pick a session (type the number):\n```'
-        counter = 1
-        for session in sessionslist:
-            sessionstring += f'{counter} - {session}\n'
-            counter += 1
-        sessionstring += '```'
-        await ctx.send(sessionstring)
-        await ctx.send('type exit to cancel')
-
-        undecided = True
-
-        while undecided:
-            sessionchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-            if sessionchoice.content.isdigit() and int(sessionchoice.content) <= len(sessionslist):
-                sessionchoice = sessionslist[int(sessionchoice.content) - 1]
-                undecided = False
-            elif sessionchoice.content == 'exit':
-                return
-            else:
-                await ctx.send('Invalid choice.')
+        sessionchoice = await decide(ctx, sessionslist)
 
         filename = sessionchoice.replace(' ', '-')
         with open(f'sessions/{filename}', 'r') as file:
@@ -289,26 +274,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
         if not sessions:
             await ctx.send('No sessions found.')
             return
-        sessionstring = 'Pick a session to delete (type the number):\n```'
-        counter = 1
-        for session in sessions:
-            sessionstring += f'{counter} - {session}\n'
-            counter += 1
-        sessionstring += '```'
-        await ctx.send(sessionstring)
-        await ctx.send('type exit to cancel')
-
-        undecided = True
-
-        while undecided:
-            sessionchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-            if sessionchoice.content.isdigit() and int(sessionchoice.content) <= len(sessions):
-                sessionchoice = sessions[int(sessionchoice.content) - 1]
-                undecided = False
-            elif sessionchoice.content == 'exit':
-                return
-            else:
-                await ctx.send('Invalid choice.')
+        sessionchoice = await decide(ctx, sessions)
+        
         os.remove(f'sessions/{sessionchoice}')
         await ctx.send('Session deleted.')
 
@@ -372,47 +339,10 @@ class SessionCommands(commands.Cog, name="Session Commands"):
                 return
 
         shows = plex.library.section('Video').all()
-        showstring = 'Pick a show (type the number):\n```'
-        counter = 1
-        for show in shows:
-            showstring += f'{counter} - {show.title}\n'
-            counter += 1
-        showstring += '```'
-        await ctx.send(showstring)
-        await ctx.send('type exit to cancel')
-
-        undecided = True
-
-        while undecided:
-            showchoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-            if showchoice.content.isdigit() and int(showchoice.content) <= len(shows):
-                showchoice = shows[int(showchoice.content) - 1] # -1 because the list is 0-indexed
-                undecided = False
-            elif showchoice.content == 'exit':
-                return
-            else:
-                await ctx.send('Invalid choice.')
+        showchoice = await decide(ctx, shows)
         
         episodes = showchoice.episodes()
-        episodestring = 'Pick an episode (type the number):\n```'
-        for episode in episodes:
-            episodestring += f'{episode.index} - {episode.title}\n'
-        episodestring += '```'
-        await ctx.send(episodestring)
-        await ctx.send('type exit to cancel')
-
-        undecided = True
-
-        while undecided:
-            episodechoice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
-            if episodechoice.content.isdigit() and int(episodechoice.content) <= len(episodes):
-                episodechoice = episodes[int(episodechoice.content) - 1]
-                print('Selected ' + episodechoice.title)
-                undecided = False
-            elif episodechoice.content == 'exit':
-                return
-            else:
-                await ctx.send('Invalid choice.')
+        episodechoice = await decide(ctx, episodes)
 
         
         await ctx.send('Attempting to start stream...')
@@ -426,9 +356,32 @@ class SessionCommands(commands.Cog, name="Session Commands"):
 class ServerCommands(commands.Cog, name="Server Commands"):
     def __init__(self, bot):
         self.bot = bot
+        self.controller = ServerController()
 
     @commands.command(help="List all game servers currently supported.")
-    async def listservers(ctx):
+    async def listservers(self, ctx):
+        for key in self.controller.servers.keys():
+            await ctx.send(key)
+    
+    @commands.command(help="Start a game server by picking one from the list.")
+    async def startserver(self, ctx):
+        if str(ctx.guild.id) not in open('authservers.txt').read():
+            await ctx.send('Server not authenticated.')
+            return
+        
+        serverlist = open('servers.txt').read().split('\n')
+        serverchoice = await decide(ctx, serverlist)
+        verboseoptions = ['yes', 'no']
+        verbosechoice = await decide(ctx, verboseoptions)
+        await ctx.send('Want me to output the server console here? (This can be kind of fucked up for some games, mainly source engine stuff)')
+        verbosechoice = True if verbosechoice == 'yes' else False
+        await self.controller.startserver(ctx, serverchoice,verbosechoice)
+    
+    commands.command(help="Make the bot stop relaying console output")
+    async def shutup(self,ctx):
+        
+        
+
 
 
 class MiscCommands(commands.Cog, name= "Misc Commands"):
