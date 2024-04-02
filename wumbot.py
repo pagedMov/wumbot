@@ -164,7 +164,7 @@ class ServerController:
             return
         await ctx.send(f'Starting {game.capitalize()} server...')
         if verbose is True:
-            await ctx.send("Outputting console lines.")
+            await ctx.send("Outputting console lines to new thread.")
             with open('console.txt', 'w') as file:
                 self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=file,shell=True)
             if self.outputrelay:
@@ -190,6 +190,7 @@ class ServerController:
             self.outputrelay = None
         if self.thread:
             await self.thread.delete()
+            await ctx.send('Console output thread deleted.')
         self.servers[game] = None
 
 
