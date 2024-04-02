@@ -191,7 +191,8 @@ class ServerController:
             while True:
                 line = file.readline()
                 if not line:
-                    break
+                    await asyncio.sleep(1)
+                    continue
                 if line != last_line_sent:
                     await ctx.send(line)
                     last_line_sent = line
