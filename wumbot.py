@@ -17,9 +17,12 @@ home = os.path.expanduser('~')
 print("Starting bot...")
 
 httpd = None
-plexpass = 'Wumboners!999'
-plexserver = 'movserver'
-plexuser = 'page710'
+
+with open('plexinfo.txt', 'r') as file:
+    plexinfo = file.read().split('\n')
+    plexpass = plexinfo[0]
+    plexserver = plexinfo[1]
+    plexuser = plexinfo[2]
 publicip = requests.get('https://api.ipify.org').text
 
 print("Connecting to plex server...")
@@ -176,11 +179,13 @@ class ServerController:
             await ctx.send('Server not running.')
             return
         commoncommands = ['stop\n','quit\n','exit\n']
-        self.outputrelay = None
+        
         for command in commoncommands:
             self.servers[game].stdin.write(command.encode())
             self.servers[game].stdin.flush()
         self.servers[game].terminate()
+        self.outputrelay.cancel()
+        self.outputrelay = None
         self.servers[game] = None
 
 
