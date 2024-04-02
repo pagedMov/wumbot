@@ -180,7 +180,7 @@ class ServerController:
         for command in commoncommands:
             self.servers[game].stdin.write(command.encode())
             self.servers[game].stdin.flush()
-        await self.servers[game].terminate()
+        self.servers[game].terminate()
         self.servers[game] = None
 
 
