@@ -54,7 +54,8 @@ async def decide(ctx, choices):
             choice = list[int(choice.content) - 1]
             undecided = False
         elif choice.content == 'exit':
-            return choice
+            await ctx.send('Cancelling command.')
+            return 'exit'
         else:
             await ctx.send('Invalid choice.')
 
@@ -139,7 +140,7 @@ class ServerController:
                 file.write('\n'.join(os.listdir('~/run/servers'))) # Write all server names to file, one per line
 
     async def startserver(self,ctx,game,verbose=False):
-        if game in self.servers:
+        if game in self.servers.keys():
             await ctx.send('Server already running.')
             return
         if game not in open('servers.txt').read():
@@ -151,8 +152,17 @@ class ServerController:
         await ctx.send(f'Starting {game.capitalize()} server...')
         self.servers[game] = subprocess.Popen(f'~/run/servers/{game}.sh',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
         if verbose:
-            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,game))
+            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,self.servers[game]))
         await ctx.send(f'{game.capitalize()} server started.')
+
+    async def stopserver(self,ctx,game):
+        if game not in self.servers:
+            await ctx.send('Server not running.')
+            return
+        commoncommands = ['stop','quit','exit']
+        for command in commoncommands:
+            self.servers[game].stdin.write(command.encode())
+            self.servers[game].stdin.flush()
 
     async def relayoutput(self,ctx,game):
         while True:
@@ -161,11 +171,11 @@ class ServerController:
                 break
             await ctx.send(output)
     
-    def startrelay(self,ctx,game):
+    async def startrelay(self,ctx,game):
         if not self.outputrelay:
-            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,game))
+            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,self.servers[game]))
     
-    def stoprelay(self):
+    async def stoprelay(self):
         if self.outputrelay:
             self.outputrelay.cancel()
             self.outputrelay = None
@@ -174,9 +184,9 @@ class ServerController:
         if game not in self.servers:
             await ctx.send('Server not running.')
             return
+        await ctx.send(f'Sending command: {command}')
         self.servers[game].stdin.write(command.encode())
         self.servers[game].stdin.flush()
-        await ctx.send(f'Sent command: {command}')
         
 
 
@@ -212,6 +222,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
         
         shows = plex.library.section('Video').all()
         showchoice = await decide(ctx, shows)
+        if showchoice == 'exit':
+            return
 
         newsession = await session_factory(ctx.author,sessionname, showchoice, 0) if not episodeoverride else await session_factory(sessionname, showchoice.key, int(episodeoverride))
         sessions[str(ctx.author.id)] = newsession
@@ -239,6 +251,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
                 return
         sessionslist = os.listdir('sessions')
         sessionchoice = await decide(ctx, sessionslist)
+        if sessionchoice == 'exit':
+            return
 
         filename = sessionchoice.replace(' ', '-')
         with open(f'sessions/{filename}', 'r') as file:
@@ -275,6 +289,8 @@ class SessionCommands(commands.Cog, name="Session Commands"):
             await ctx.send('No sessions found.')
             return
         sessionchoice = await decide(ctx, sessions)
+        if sessionchoice == 'exit':
+            return
         
         os.remove(f'sessions/{sessionchoice}')
         await ctx.send('Session deleted.')
@@ -340,9 +356,13 @@ class SessionCommands(commands.Cog, name="Session Commands"):
 
         shows = plex.library.section('Video').all()
         showchoice = await decide(ctx, shows)
+        if showchoice == 'exit':
+            return
         
         episodes = showchoice.episodes()
         episodechoice = await decide(ctx, episodes)
+        if episodechoice == 'exit':
+            return
 
         
         await ctx.send('Attempting to start stream...')
@@ -371,17 +391,59 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         
         serverlist = open('servers.txt').read().split('\n')
         serverchoice = await decide(ctx, serverlist)
+        if serverchoice == 'exit':
+            return
         verboseoptions = ['yes', 'no']
         verbosechoice = await decide(ctx, verboseoptions)
+        if verbosechoice == 'exit':
+            return
         await ctx.send('Want me to output the server console here? (This can be kind of fucked up for some games, mainly source engine stuff)')
         verbosechoice = True if verbosechoice == 'yes' else False
         await self.controller.startserver(ctx, serverchoice,verbosechoice)
     
-    commands.command(help="Make the bot stop relaying console output")
+    @commands.command(help="Make the bot stop relaying console output")
     async def shutup(self,ctx):
+        await self.controller.stoprelay()
+    
+    @commands.command(help="Makes the bot begin relaying server console output")
+    async def consolerelay(self,ctx):
+        servers = self.controller.servers
+        if len(servers) > 1:
+            serverchoice = await decide(ctx,servers)
+            if serverchoice == 'exit':
+                return
+        else:
+            serverchoice = servers.keys()[0]
+        await self.controller.startrelay(serverchoice)
+    
+    @commands.command(help='''type !help rcon for this one.\n
+                            This command will allow you to directly pass commands to the server.\n
+                            It may not work for all servers, so if this breaks something, oh well.\n
+                            Syntax is: !rcon <game> "<command>"\n
+                            Example: !rcon minecraft "op pagedmov"\n
+                            make sure that the game name is entered correctly.\n
+                            You can find the game name by using !listservers.''')
+    async def rcon(self,ctx,game,command):
+        if str(ctx.guild.id) not in open('authservers.txt').read():
+            await ctx.send('Server not authenticated.')
+            return
+        await self.controller.rcon(ctx,game,command)
+    
+    @commands.command(help="Stop a game server. Might be better to use !rcon <game> <killcommand> if this doesn't work.")
+    async def stopserver(self, ctx):
+        if str(ctx.guild.id) not in open('authservers.txt').read():
+            await ctx.send('Server not authenticated.')
+            return
+        servers = self.controller.servers
+        if len(servers) > 1:
+            serverchoice = await decide(ctx,servers)
+            if serverchoice == 'exit':
+                return
+        else:
+            serverchoice = servers.keys()[0]
+        self.controller.stopserver(ctx,serverchoice)
+        await ctx.send(f'{serverchoice} server stopped.')
         
-        
-
 
 
 class MiscCommands(commands.Cog, name= "Misc Commands"):
