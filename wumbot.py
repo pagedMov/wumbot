@@ -431,12 +431,13 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if serverchoice == 'exit':
             return
         verboseoptions = ['yes', 'no']
-        await ctx.send('Want me to output the server console here? (This can be kind of fucked up for some games, mainly source engine stuff)')
+        await ctx.send('Want me to output the server console to a thread in this channel?')
         verbosechoice = await decide(ctx, verboseoptions)
-        if verbosechoice == 'exit':
-            return
-        verbosechoice = True if verbosechoice == 'yes' else False
-        await self.controller.startserver(ctx, serverchoice,verbosechoice)
+        if verbosechoice:
+            thread = await ctx.channel.create_thread(name=f"{serverchoice}-console-output")
+            await self.controller.startserver(thread, serverchoice, verbosechoice)
+        else:
+            await self.controller.startserver(ctx, serverchoice, verbosechoice)
     
     @commands.command(help="Make the bot stop relaying console output")
     async def shutup(self,ctx):
