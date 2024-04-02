@@ -148,7 +148,7 @@ class ServerController:
             with open('servers.txt', 'w') as file:
                 file.write('\n'.join(os.listdir(f'{home}/run/servers'))) # Write all server names to file, one per line
 
-    async def startserver(self,ctx,game,verbose=False):
+    async def startserver(self,ctx,game,verbose):
         if game in self.servers.keys():
             await ctx.send('Server already running.')
             return
@@ -160,8 +160,11 @@ class ServerController:
             return
         await ctx.send(f'Starting {game.capitalize()} server...')
         self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
-        if verbose:
+        if verbose is True:
+            await ctx.send("Outputting console lines.")
             self.outputrelay = asyncio.create_task(self.relayoutput(ctx,self.servers[game]))
+        else:
+            await ctx.send("Not outputting console lines.")
         await ctx.send(f'{game.capitalize()} server started.')
 
     async def stopserver(self,ctx,game):
@@ -180,6 +183,7 @@ class ServerController:
     async def relayoutput(self,ctx,game):
         while True:
             output = self.servers[game].stderr.readline().decode()
+            print(output)
             await ctx.send(output)
     
     async def startrelay(self,ctx,game):
@@ -416,10 +420,6 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if verbosechoice == 'exit':
             return
         verbosechoice = True if verbosechoice == 'yes' else False
-        if verbosechoice:
-            await ctx.send("Outputting console lines.")
-        else:
-            await.ctx.send("Not outputting console lines.")
         await self.controller.startserver(ctx, serverchoice,verbosechoice)
     
     @commands.command(help="Make the bot stop relaying console output")
