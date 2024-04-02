@@ -383,8 +383,11 @@ class ServerCommands(commands.Cog, name="Server Commands"):
 
     @commands.command(help="List all game servers currently supported.")
     async def listservers(self, ctx):
-        for key in self.controller.servers.keys():
-            await ctx.send(key)
+        if self.servers != {}:
+            for key in self.controller.servers.keys():
+                await ctx.send(key)
+        else:
+            await ctx.send('No servers running.')
     
     @commands.command(help="Start a game server by picking one from the list.")
     async def startserver(self, ctx):
@@ -397,10 +400,10 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if serverchoice == 'exit':
             return
         verboseoptions = ['yes', 'no']
+        await ctx.send('Want me to output the server console here? (This can be kind of fucked up for some games, mainly source engine stuff)')
         verbosechoice = await decide(ctx, verboseoptions)
         if verbosechoice == 'exit':
             return
-        await ctx.send('Want me to output the server console here? (This can be kind of fucked up for some games, mainly source engine stuff)')
         verbosechoice = True if verbosechoice == 'yes' else False
         await self.controller.startserver(ctx, serverchoice,verbosechoice)
     
