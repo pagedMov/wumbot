@@ -169,17 +169,17 @@ class ServerController:
             await ctx.send('Server not running.')
             return
         commoncommands = ['stop','quit','exit']
+        self.outputrelay = None
         for command in commoncommands:
             self.servers[game].stdin.write(command.encode())
             self.servers[game].stdin.flush()
-        self.servers[game].terminate()
-        self.servers.pop(game)
+        await self.servers[game].terminate()
+        self.servers[game] = None
+
 
     async def relayoutput(self,ctx,game):
         while True:
-            output = self.servers[game].stdout.readline()
-            if not output:
-                break
+            output = self.servers[game].stderr.readline().decode()
             await ctx.send(output)
     
     async def startrelay(self,ctx,game):
