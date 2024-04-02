@@ -226,7 +226,7 @@ class ServerController:
         
 
 
-class SessionCommands(commands.Cog, name="Session Commands"):
+class SessionCommands(commands.Cog, name="Video Session Commands"):
     def __init__(self, bot):
         self.bot = bot
     
@@ -416,12 +416,13 @@ class ServerCommands(commands.Cog, name="Server Commands"):
 
     @commands.command(help="List all game servers currently supported.")
     async def listservers(self, ctx):
-        if self.controller.servers != {}:
+        if open('servers.txt').read():
             serverstring = '```'
-            for key in self.controller.servers.keys():
-                serverstring += f'{key}\n'
+            for server in open('servers.txt').read().split('\n'):
+                serverstring += f'{server}\n'
             serverstring += '```'
             await ctx.send(serverstring)
+            
         else:
             await ctx.send('No servers running.')
     
