@@ -22,6 +22,7 @@ plexserver = 'movserver'
 plexuser = 'page710'
 publicip = requests.get('https://api.ipify.org').text
 
+print("Connecting to plex server...")
 
 global plex
 account = MyPlexAccount(plexuser, plexpass)
@@ -445,13 +446,13 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if str(ctx.guild.id) not in open('authservers.txt').read():
             await ctx.send('Server not authenticated.')
             return
-        servers = self.controller.servers
+        servers = self.controller.servers.keys()
         if len(servers) > 1:
             serverchoice = await decide(ctx,servers)
             if serverchoice == 'exit':
                 return
         else:
-            serverchoice = servers.keys()[0]
+            serverchoice = servers[0]
         self.controller.stopserver(ctx,serverchoice)
         await ctx.send(f'{serverchoice} server stopped.')
         
