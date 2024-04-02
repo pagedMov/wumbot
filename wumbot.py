@@ -21,11 +21,12 @@ plexserver = 'movserver'
 plexuser = 'page710'
 publicip = requests.get('https://api.ipify.org').text
 
-print("Connected to plex server.")
 
 global plex
 account = MyPlexAccount(plexuser, plexpass)
 plex = account.resource(plexserver).connect()
+
+print("Connected to plex server.")
 
 intents = discord.Intents.default()
 intents.message_content = True
