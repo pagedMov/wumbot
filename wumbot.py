@@ -175,7 +175,7 @@ class ServerController:
         if game not in self.servers:
             await ctx.send('Server not running.')
             return
-        commoncommands = ['stop','quit','exit']
+        commoncommands = ['stop\n','quit\n','exit\n']
         self.outputrelay = None
         for command in commoncommands:
             self.servers[game].stdin.write(command.encode())
