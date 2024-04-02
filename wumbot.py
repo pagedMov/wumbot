@@ -416,6 +416,10 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if verbosechoice == 'exit':
             return
         verbosechoice = True if verbosechoice == 'yes' else False
+        if verbosechoice:
+            await ctx.send("Outputting console lines.")
+        else:
+            await.ctx.send("Not outputting console lines.")
         await self.controller.startserver(ctx, serverchoice,verbosechoice)
     
     @commands.command(help="Make the bot stop relaying console output")
