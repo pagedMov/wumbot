@@ -211,7 +211,7 @@ class ServerController:
             await ctx.send('Server not running.')
             return
         await ctx.send(f'Sending command: {command}')
-        self.servers[game].stdin.write(command.encode())
+        self.servers[game].stdin.write((command + '\n').encode())
         self.servers[game].stdin.flush()
         
 
