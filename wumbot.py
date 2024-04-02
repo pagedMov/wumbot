@@ -153,7 +153,7 @@ class ServerController:
             await ctx.send('Too many servers running.')
             return
         await ctx.send(f'Starting {game.capitalize()} server...')
-        self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}.sh',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+        self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
         if verbose:
             self.outputrelay = asyncio.create_task(self.relayoutput(ctx,self.servers[game]))
         await ctx.send(f'{game.capitalize()} server started.')
