@@ -24,18 +24,18 @@ print("Starting bot...")
 
 httpd = None
 
-with open('plexinfo.txt', 'r') as file:
-    plexinfo = file.read().split('\n')
-    plexpass = plexinfo[0]
-    plexserver = plexinfo[1]
-    plexuser = plexinfo[2]
-publicip = requests.get('https://api.ipify.org').text
+# with open('plexinfo.txt', 'r') as file:
+#     plexinfo = file.read().split('\n')
+#     plexpass = plexinfo[0]
+#     plexserver = plexinfo[1]
+#     plexuser = plexinfo[2]
+# publicip = requests.get('https://api.ipify.org').text
 
-print("Connecting to plex server...")
+# print("Connecting to plex server...")
 
-global plex
-account = MyPlexAccount(plexuser, plexpass)
-plex = account.resource(plexserver).connect()
+# global plex
+# account = MyPlexAccount(plexuser, plexpass)
+# plex = account.resource(plexserver).connect()
 
 print("Connected to plex server.")
 
@@ -442,7 +442,7 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if serverchoice == 'exit':
             return
         verboseoptions = ['yes', 'no']
-        await ctx.send('Want me to output the server console to a thread in this channel?')
+        await ctx.send('Want me to output the server console to a thread in this channel? (Warning: source games are VERY verbose)')
         verbosechoice = await decide(ctx, verboseoptions)
         verbosechoice = True if verbosechoice == 'yes' else False
         if verbosechoice:
