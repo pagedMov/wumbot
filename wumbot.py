@@ -8,6 +8,7 @@ import requests
 import json
 import re
 import asyncio
+import subprocess
 
 print("Starting bot...")
 
@@ -105,7 +106,57 @@ async def session_factory(owner, sessionname, showkey, episode):
 
     return Session(owner, sessionname, showkey, episode)
 
+
+class ServerController:
+
+    def __init__(self):
+        self.servers = {}
+        self.outputrelay = None
+        if not os.path.exists('servers.txt') or not open('servers.txt').read():
+            with open('servers.txt', 'w') as file:
+                file.write('\n'.join(os.listdir('~/run/servers'))) # Write all server names to file, one per line
+
+    async def startserver(self,ctx,game,verbose=False):
+        if game in self.servers:
+            await ctx.send('Server already running.')
+            return
+        if game not in open('servers.txt').read():
+            await ctx.send('Game not supported.')
+            return
+        if len(self.servers) >= 2:
+            await ctx.send('Too many servers running.')
+            return
+        await ctx.send(f'Starting {game.capitalize()} server...')
+        self.servers[game] = subprocess.Popen(f'~/run/servers/{game}.sh',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+        if verbose:
+            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,game))
+        await ctx.send(f'{game.capitalize()} server started.')
+
+    async def relayoutput(self,ctx,game):
+        while True:
+            output = self.servers[game].stdout.readline()
+            if not output:
+                break
+            await ctx.send(output)
+    
+    def startrelay(self,ctx,game):
+        if not self.outputrelay:
+            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,game))
+    
+    def stoprelay(self):
+        if self.outputrelay:
+            self.outputrelay.cancel()
+            self.outputrelay = None
+    
+    async def rcon(self,ctx,game,command):
+        if game not in self.servers:
+            await ctx.send('Server not running.')
+            return
+        self.servers[game].stdin.write(command.encode())
+        self.servers[game].stdin.flush()
+        await ctx.send(f'Sent command: {command}')
         
+
 
 class SessionCommands(commands.Cog, name="Session Commands"):
     def __init__(self, bot):
@@ -371,6 +422,13 @@ class SessionCommands(commands.Cog, name="Session Commands"):
         await ctx.send(f'Stream started at: ```{url}```')
         await ctx.send('Open this link by starting VLC media player, pressing Ctrl+N and pasting the link in the text box. This will work with other media players too if they have network stream support.')
         #await ctx.send('(Note: for some god forsaken reason, right clicking the link message and then clicking copy text does not work with VLC, the link won`t work. You have to highlight it and then do Ctrl+C. Do not ask. I have no idea.)')
+
+class ServerCommands(commands.Cog, name="Server Commands"):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(help="List all game servers currently supported.")
+    async def listservers(ctx):
 
 
 class MiscCommands(commands.Cog, name= "Misc Commands"):
