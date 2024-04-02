@@ -446,7 +446,7 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         if str(ctx.guild.id) not in open('authservers.txt').read():
             await ctx.send('Server not authenticated.')
             return
-        servers = self.controller.servers.keys()
+        servers = [key for key in self.controller.servers.keys()]
         if len(servers) > 1:
             serverchoice = await decide(ctx,servers)
             if serverchoice == 'exit':
