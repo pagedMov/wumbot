@@ -44,7 +44,10 @@ async def decide(ctx, choices):
     liststring = 'Pick an option (type the number):\n```'
     counter = 1
     for item in list:
-        liststring += f'{counter} - {item}\n'
+        if isinstance(Show, item) or isinstance(Episode, item):
+            liststring += f'{counter} - {item.title}\n'
+        else:
+            liststring += f'{counter} - {item}\n'
         counter += 1
     liststring += '```'
     await ctx.send(liststring)
