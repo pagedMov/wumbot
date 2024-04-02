@@ -184,8 +184,9 @@ class ServerController:
             self.servers[game].stdin.write(command.encode())
             self.servers[game].stdin.flush()
         self.servers[game].terminate()
-        self.outputrelay.cancel()
-        self.outputrelay = None
+        if self.outputrelay:
+            self.outputrelay.cancel()
+            self.outputrelay = None
         self.servers[game] = None
 
 
@@ -433,6 +434,7 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         verboseoptions = ['yes', 'no']
         await ctx.send('Want me to output the server console to a thread in this channel?')
         verbosechoice = await decide(ctx, verboseoptions)
+        verbosechoice = True if verbosechoice == 'yes' else False
         if verbosechoice:
             thread = await ctx.channel.create_thread(name=f"{serverchoice}-console-output")
             await self.controller.startserver(thread, serverchoice, verbosechoice)
