@@ -159,11 +159,15 @@ class ServerController:
             await ctx.send('Too many servers running.')
             return
         await ctx.send(f'Starting {game.capitalize()} server...')
-        self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
         if verbose is True:
             await ctx.send("Outputting console lines.")
-            self.outputrelay = asyncio.create_task(self.relayoutput(ctx,self.servers[game]))
+            with open('console.txt', 'w') as file:
+                self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=file,shell=True)
+            if self.outputrelay:
+                self.outputrelay.cancel()
+            self.outputrelay = asyncio.create_task(self.relayoutput(ctx))
         else:
+            self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
             await ctx.send("Not outputting console lines.")
         await ctx.send(f'{game.capitalize()} server started.')
 
@@ -180,11 +184,17 @@ class ServerController:
         self.servers[game] = None
 
 
-    async def relayoutput(self,ctx,game):
-        while True:
-            output = self.servers[game].stderr.readline().decode()
-            print(output)
-            await ctx.send(output)
+    async def relayoutput(self,ctx):
+        with open('console.txt', 'r') as file: #read from the console file that is being written to by the server
+            file.seek(0,2)
+            last_line_sent = None
+            while True:
+                line = file.readline()
+                if not line:
+                    break
+                if line != last_line_sent:
+                    await ctx.send(line)
+                    last_line_sent = line
     
     async def startrelay(self,ctx,game):
         if not self.outputrelay:
