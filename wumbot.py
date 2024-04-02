@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 import os
 from plexapi.myplex import MyPlexAccount
+from plexapi.video import Show, Episode
 import requests
 import json
 import re
@@ -44,7 +45,7 @@ async def decide(ctx, choices):
     liststring = 'Pick an option (type the number):\n```'
     counter = 1
     for item in list:
-        if isinstance(Show, item) or isinstance(Episode, item):
+        if isinstance(item, Episode) or isinstance(item, Show):
             liststring += f'{counter} - {item.title}\n'
         else:
             liststring += f'{counter} - {item}\n'
