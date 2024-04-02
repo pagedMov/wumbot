@@ -489,6 +489,7 @@ class MiscCommands(commands.Cog, name= "Misc Commands"):
 async def setup(bot):
     await bot.add_cog(SessionCommands(bot))
     await bot.add_cog(MiscCommands(bot))
+    await bot.add_cog(ServerCommands(bot))
 
 @bot.event
 async def on_ready():
