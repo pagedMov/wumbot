@@ -148,9 +148,8 @@ class ServerController:
         self.servers = {}
         self.outputrelay = None
         self.thread = None
-        if not os.path.exists('servers.txt') or not open('servers.txt').read():
-            with open('servers.txt', 'w') as file:
-                file.write('\n'.join(os.listdir(f'{home}/run/servers'))) # Write all server names to file, one per line
+        with open('servers.txt', 'w') as file:
+            file.write('\n'.join(os.listdir(f'{home}/run/servers'))) # Write all server names to file, one per line
 
     async def startserver(self,ctx,game,verbose):
         if game in self.servers.keys():
