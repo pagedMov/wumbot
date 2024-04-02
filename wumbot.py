@@ -172,6 +172,8 @@ class ServerController:
         for command in commoncommands:
             self.servers[game].stdin.write(command.encode())
             self.servers[game].stdin.flush()
+        self.servers[game].terminate()
+        self.servers.pop(game)
 
     async def relayoutput(self,ctx,game):
         while True:
@@ -390,8 +392,11 @@ class ServerCommands(commands.Cog, name="Server Commands"):
     @commands.command(help="List all game servers currently supported.")
     async def listservers(self, ctx):
         if self.controller.servers != {}:
+            serverstring = '```'
             for key in self.controller.servers.keys():
-                await ctx.send(key)
+                serverstring += f'{key}\n'
+            serverstring += '```'
+            await ctx.send(serverstring)
         else:
             await ctx.send('No servers running.')
     
@@ -453,7 +458,7 @@ class ServerCommands(commands.Cog, name="Server Commands"):
                 return
         else:
             serverchoice = servers[0]
-        self.controller.stopserver(ctx,serverchoice)
+        await self.controller.stopserver(ctx,serverchoice)
         await ctx.send(f'{serverchoice} server stopped.')
         
 
