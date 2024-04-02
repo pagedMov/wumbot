@@ -60,7 +60,7 @@ async def decide(ctx, choices):
         choice = await bot.wait_for('message', check=lambda msg: msg.author == ctx.author)
         if choice.content.isdigit() and int(choice.content) <= len(list):
             choice = list[int(choice.content) - 1]
-            undecided = False
+            return choice
         elif choice.content == 'exit':
             await ctx.send('Cancelling command.')
             return 'exit'
