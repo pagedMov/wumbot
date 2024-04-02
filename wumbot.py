@@ -207,7 +207,7 @@ class ServerController:
             self.outputrelay = None
     
     async def rcon(self,ctx,game,command):
-        if game not in self.servers:
+        if game not in self.servers.keys():
             await ctx.send('Server not running.')
             return
         await ctx.send(f'Sending command: {command}')
