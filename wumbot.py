@@ -10,6 +10,14 @@ import json
 import re
 import asyncio
 import subprocess
+import glob
+
+global env
+env = os.environ.copy()
+steamdir = "/home/pagedmov/.steam"
+subdirs = [dir for dir in glob.glob(f'{steamdir}/**/', recursive=True)]
+
+env["PATH"] = f'{env["PATH"]}:{':'.join(subdirs)}'
 
 global home
 home = os.path.expanduser('~')
@@ -165,12 +173,12 @@ class ServerController:
         if verbose is True:
             await ctx.send("Outputting console lines to new thread.")
             with open('console.txt', 'w') as file:
-                self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=file,shell=True)
+                self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=file,shell=True,env=env)
             if self.outputrelay:
                 self.outputrelay.cancel()
             self.outputrelay = asyncio.create_task(self.relayoutput(self.thread))
         else:
-            self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+            self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True,env=env)
             await ctx.send("Not outputting console lines.")
         await ctx.send(f'{game.capitalize()} server started.')
 
