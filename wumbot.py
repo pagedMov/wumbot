@@ -169,7 +169,7 @@ class ServerController:
                 self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=file,shell=True)
             if self.outputrelay:
                 self.outputrelay.cancel()
-            self.outputrelay = asyncio.create_task(self.relayoutput(ctx))
+            self.outputrelay = asyncio.create_task(self.relayoutput(self.thread))
         else:
             self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
             await ctx.send("Not outputting console lines.")
@@ -440,7 +440,7 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         verbosechoice = True if verbosechoice == 'yes' else False
         if verbosechoice:
             self.controller.thread = await ctx.channel.create_thread(name=f"{serverchoice}-console-output")
-            await self.controller.startserver(self.controller.thread, serverchoice, verbosechoice)
+            await self.controller.startserver(ctx, serverchoice, verbosechoice)
         else:
             await self.controller.startserver(ctx, serverchoice, verbosechoice)
     
