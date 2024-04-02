@@ -384,7 +384,7 @@ class ServerCommands(commands.Cog, name="Server Commands"):
 
     @commands.command(help="List all game servers currently supported.")
     async def listservers(self, ctx):
-        if self.servers != {}:
+        if self.controller.servers != {}:
             for key in self.controller.servers.keys():
                 await ctx.send(key)
         else:
