@@ -17,7 +17,7 @@ env = os.environ.copy()
 steamdir = "/home/pagedmov/.steam"
 subdirs = [dir for dir in glob.glob(f'{steamdir}/**/', recursive=True)]
 
-env["PATH"] = f'{env["PATH"]}:{':'.join(subdirs)}'
+env["PATH"] = f'{env["PATH"]}:{":".join(subdirs)}'
 
 global home
 home = os.path.expanduser('~')
