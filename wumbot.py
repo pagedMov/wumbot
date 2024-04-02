@@ -10,6 +10,9 @@ import re
 import asyncio
 import subprocess
 
+global home
+home = os.path.expanduser('~')
+
 print("Starting bot...")
 
 httpd = None
@@ -137,7 +140,7 @@ class ServerController:
         self.outputrelay = None
         if not os.path.exists('servers.txt') or not open('servers.txt').read():
             with open('servers.txt', 'w') as file:
-                file.write('\n'.join(os.listdir('~/run/servers'))) # Write all server names to file, one per line
+                file.write('\n'.join(os.listdir(f'{home}/run/servers'))) # Write all server names to file, one per line
 
     async def startserver(self,ctx,game,verbose=False):
         if game in self.servers.keys():
@@ -150,7 +153,7 @@ class ServerController:
             await ctx.send('Too many servers running.')
             return
         await ctx.send(f'Starting {game.capitalize()} server...')
-        self.servers[game] = subprocess.Popen(f'~/run/servers/{game}.sh',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+        self.servers[game] = subprocess.Popen(f'{home}/run/servers/{game}.sh',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
         if verbose:
             self.outputrelay = asyncio.create_task(self.relayoutput(ctx,self.servers[game]))
         await ctx.send(f'{game.capitalize()} server started.')
