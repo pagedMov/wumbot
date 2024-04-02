@@ -147,6 +147,7 @@ class ServerController:
     def __init__(self):
         self.servers = {}
         self.outputrelay = None
+        self.thread = None
         if not os.path.exists('servers.txt') or not open('servers.txt').read():
             with open('servers.txt', 'w') as file:
                 file.write('\n'.join(os.listdir(f'{home}/run/servers'))) # Write all server names to file, one per line
@@ -187,6 +188,8 @@ class ServerController:
         if self.outputrelay:
             self.outputrelay.cancel()
             self.outputrelay = None
+        if self.thread:
+            await self.thread.delete()
         self.servers[game] = None
 
 
@@ -436,8 +439,8 @@ class ServerCommands(commands.Cog, name="Server Commands"):
         verbosechoice = await decide(ctx, verboseoptions)
         verbosechoice = True if verbosechoice == 'yes' else False
         if verbosechoice:
-            thread = await ctx.channel.create_thread(name=f"{serverchoice}-console-output")
-            await self.controller.startserver(thread, serverchoice, verbosechoice)
+            self.controller.thread = await ctx.channel.create_thread(name=f"{serverchoice}-console-output")
+            await self.controller.startserver(self.controller.thread, serverchoice, verbosechoice)
         else:
             await self.controller.startserver(ctx, serverchoice, verbosechoice)
     
