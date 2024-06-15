@@ -1,5 +1,5 @@
 # wumbot
-This is a discord bot I set up that will allow my friends some level of control over my personal server through discord
+This is a discord bot I set up that will allow my friends some level of control over my personal media server through discord
 
 Current functionality:
 
